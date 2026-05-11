@@ -4,6 +4,7 @@ Dual-channel like BossClient: httpx for low-risk reads, browser for high-risk wr
 Endpoints sourced from newboss/boss-cli project (confirmed via reverse engineering).
 """
 import atexit
+import json
 import random
 import time
 import weakref
@@ -178,16 +179,45 @@ class BossRecruiterClient:
 
 	# ── 候选人搜索与简历 ──────────────────────────────────
 
-	def search_geeks(self, query: str, *, city: str | None = None, page: int = 1, job_id: str | None = None, experience: str | None = None, degree: str | None = None) -> dict[str, Any]:
-		params: dict[str, Any] = {"query": query, "page": page}
-		if city:
-			params["city"] = city
+	def search_geeks(self, query: str, *, city: str | None = None, page: int = 1, job_id: str | None = None, experience: str | None = None, degree: str | None = None, age: str | None = None, school_level: str | None = None, activeness: str | None = None, source: str | None = None, select: bool = False, salary: str | None = None) -> dict[str, Any]:
+		city_code = city or "-2"
+		params: dict[str, Any] = {
+			"page": page,
+			"keywords": query or "",
+			"tag": "",
+			"city": city_code,
+			"gender": "-1",
+			"experience": experience or "-1,-1",
+			"salary": salary or "-1,-1",
+			"age": age or "-1,-1",
+			"applyStatus": "-1",
+			"degree": degree or "-1,-1",
+			"switchFreq": 0,
+			"manageExperience": 0,
+			"geekJobRequirements": 0,
+			"exchangeResume": 0,
+			"viewResume": 0,
+			"firstDegree": 0,
+			"queryAnd": 0,
+			"source": source or 4,
+			"activeness": activeness or 0,
+			"defaultCondition": 2,
+			"hasRcd": 0,
+			"filterParams": json.dumps({
+				"sortType": 1,
+				"region": {"cityCode": city_code, "cityName": "", "areas": []},
+				"overSeaWorkExperience": 0,
+				"overSeaWorkLanguage": 0,
+				"overSeaWorkWill": 0,
+				"manageExperience": 0,
+			}, separators=(",", ":")),
+		}
+		if school_level:
+			params["schoolLevel"] = school_level
+		if select:
+			params["select"] = "true"
 		if job_id:
-			params["encryptJobId"] = job_id
-		if experience:
-			params["experience"] = experience
-		if degree:
-			params["degree"] = degree
+			params["jobId"] = job_id
 		return self._request("GET", ep.BOSS_SEARCH_GEEK_URL, params=params)
 
 	def view_geek(self, geek_id: str, job_id: str, security_id: str | None = None) -> dict[str, Any]:
