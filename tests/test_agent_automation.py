@@ -13,7 +13,7 @@ from boss_agent_cli.automation.adapters import build_automation_adapter
 from boss_agent_cli.automation.boss_adapter import BossRecruiterAutomationPlatform
 from boss_agent_cli.automation.mock_adapter import MockRecruiterAutomationPlatform
 from boss_agent_cli.automation.zhilian_adapter import ZhilianRecruiterAutomationPlatform
-from boss_agent_cli.automation.config import AutomationConfig, ReplyStrategy
+from boss_agent_cli.automation.config import AutomationConfig, ReplyStrategy, automation_config_from_dict
 from boss_agent_cli.automation.decision import decide_action
 from boss_agent_cli.automation.events import stable_action_id
 from boss_agent_cli.automation.models import (
@@ -99,6 +99,11 @@ def _conversation(text: str, title: str = "张三") -> Conversation:
 		all_messages=(text,),
 		fingerprint=ConversationFingerprint(title),
 	)
+
+
+def test_automation_config_from_empty_matches_dataclass_defaults() -> None:
+	assert automation_config_from_dict({}) == AutomationConfig()
+	assert automation_config_from_dict(None) == AutomationConfig()
 
 
 def test_decision_sends_questionnaire_for_high_confidence_new_candidate() -> None:
@@ -243,7 +248,16 @@ def test_runner_creates_interview_lead_after_contact_exchange(tmp_path: Path) ->
 	assert (tmp_path / "automation" / "interview-leads.csv").exists()
 
 
-def test_agent_run_cli_returns_json_envelope(tmp_path: Path) -> None:
+def test_agent_run_cli_returns_json_envelope(tmp_path: Path, monkeypatch) -> None:
+	# 隔离真实 CDP：无论本机 9222 是否有 Chrome 在监听，都强制走「CDP 不可用」分支，
+	# 使 dry-run 稳定得到 STOPPED_BY_SAFETY（否则连到用户自己的 Chrome 会翻成 CIRCUIT_BREAKER_OPEN）。
+	def _no_cdp(*args, **kwargs):
+		raise RuntimeError("CDP unavailable in test")
+
+	monkeypatch.setattr(
+		"boss_agent_cli.automation.zhilian_cdp.create_zhilian_browser_session_from_cdp",
+		_no_cdp,
+	)
 	runner = CliRunner()
 	result = runner.invoke(
 		cli,
