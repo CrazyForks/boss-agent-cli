@@ -49,6 +49,27 @@ Parsing contract:
 - `ok=true` means success; when `ok=false`, inspect `error.code` and `error.recovery_action`
 - `boss schema` also returns `supported_platforms`, `supported_recruiter_platforms`, and per-command `availability`, so agents can route tools by `role/platform`
 
+### Candidate crawl orchestration
+
+After `uv sync --extra crawl`, crawl uses only the isolated `<data-dir>/crawl/chrome-profile`. MCP remains assisted-only: create the task in the CLI, then use MCP to read or locally import the existing run:
+
+```text
+boss crawl start <query> --city <city> --pages <n>
+→ receive run_id
+→ boss_crawl_status(run_id)
+→ boss_crawl_results(run_id)
+→ boss_crawl_shortlist(run_id, all=true)
+→ boss_ai_fit(resume)
+```
+
+In the CLI, `boss agent crawl --run-id <run_id> --resume <resume-name>` consumes only a completed run and then performs shortlist + ai fit. Starting a real crawl through Agent requires `operating_mode=research` plus `--allow-crawl` authorization:
+
+```bash
+boss agent crawl --query "AI engineer" --city 杭州 --pages 3 --with-detail --allow-crawl --resume <resume-name>
+```
+
+Hooks are disabled by default. Only when you have authorization may you explicitly pass `--hook-profile screenshot-full --hook-dir <directory containing SHA256SUMS>`; this project does not redistribute third-party scripts. To halt a task, run `boss crawl stop <run_id>`. When `crawl_status` reports `risk_stopped` or `budget_stopped`, do not recreate the task or retry in a loop. Keep the `run_id`; after handling the page, run `boss crawl resume <run_id>`.
+
 ### Recruiter boundary
 
 Default low-risk mode blocks recruiter candidate search, applications, resumes, chats, contact exchange, and replies. The low-risk recruiter surface keeps job-list management available:

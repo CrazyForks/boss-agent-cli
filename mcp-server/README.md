@@ -9,7 +9,7 @@
 ## 安装
 
 ```bash
-uv tool install "boss-agent-cli[mcp]"
+uv tool install "boss-agent-cli[mcp,crawl]"  # 不需要 crawl 时可只装 [mcp]
 ```
 
 如从源码运行：
@@ -73,7 +73,7 @@ MCP Server 内部调用 `boss` CLI 时会关闭子进程 stdin，避免子进程
 
 ## 可用工具
 
-当前 MCP Server 默认暴露 **32 个低风险工具**。
+当前 MCP Server 默认暴露 **49 个低风险与本地任务工具**。
 
 ### 认证与环境
 
@@ -99,6 +99,16 @@ MCP Server 内部调用 `boss` CLI 时会关闭子进程 stdin，避免子进程
 | `boss_shortlist_remove` | 从本地候选池移除 |
 | `boss_preset_add/list/remove` | 管理本地搜索预设 |
 | `boss_watch_add/list/remove` | 管理本地监控预设；`watch run` 默认不暴露 |
+
+### 已有 crawl 任务
+
+| 工具 | 说明 |
+|------|------|
+| `boss_crawl_status` | 读取页游标、职位数、详情进度、风险状态和恢复命令 |
+| `boss_crawl_results` | 读取一个 run 已持久化的职位，可按页面/详情状态筛选 |
+| `boss_crawl_shortlist` | 将一个 run 的职位导入本地候选池，不请求平台 |
+
+MCP 保持 assisted-only，不能创建、恢复或停止真实 Chrome crawl。先通过显式 Research Mode CLI 创建任务，再用 `boss_crawl_status`、`boss_crawl_results` 和 `boss_crawl_shortlist` 读取或本地导入其 `run_id`。默认 Hook 为 `none`；若用户已拥有脚本授权，可仅在 CLI 明确传 `--hook-profile screenshot-full --hook-dir <含 SHA256SUMS 的目录>`，项目不发布第三方脚本。
 
 ### 用户与简历
 

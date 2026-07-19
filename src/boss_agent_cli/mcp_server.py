@@ -21,9 +21,8 @@ from boss_agent_cli.platforms import list_platforms, list_recruiter_platforms
 
 SERVER_INSTRUCTIONS = (
 	"boss-agent-cli over MCP: a local-assist BOSS Zhipin job-search toolset in assisted mode by default — "
-	"read-only first and user-triggered. The CLI also has an explicit research operating mode for bounded "
-	"browser-protocol, anti-debugging, risk-control adaptation, and controlled collection research; the default "
-	"MCP surface remains assisted-only until mode-aware tool exposure is implemented. "
+	"read-only first and user-triggered. MCP remains assisted-only until a dedicated mode-aware exposure contract is "
+	"implemented; it can only inspect or locally shortlist existing crawl runs by run_id. "
 	"Sensitive actions (greet, batch-greet, apply, contact exchange, recruiter candidate data, replies) "
 	"are not exposed and return COMPLIANCE_BLOCKED at the CLI layer; for those the user acts manually on "
 	"the official BOSS Zhipin website. Every tool returns the same JSON envelope "
@@ -104,6 +103,8 @@ def _tool_availability(tool_name: str) -> dict[str, Any] | None:
 		return commands["preset"].get("availability")
 	if name.startswith("shortlist_"):
 		return commands["shortlist"].get("availability")
+	if name.startswith("crawl_"):
+		return commands["crawl"].get("availability")
 	if name.startswith("hr_"):
 		sub_name = name.removeprefix("hr_").replace("_", "-")
 		hr_availability = commands["hr"].get("availability") or {}
@@ -116,6 +117,15 @@ def _decorate_tool_descriptions() -> None:
 		availability = _tool_availability(tool.name)
 		if availability:
 			tool.description = f"{tool.description} [可用性: {_availability_note(availability)}]"
+
+
+def _crawl_task_tools() -> list[Tool]:
+	"""Build crawl MCP tools from the schema instead of duplicating their contract."""
+	tools = _SCHEMA_WITH_AVAILABILITY["commands"]["crawl"].get("mcp_tools", [])
+	return [
+		Tool(name=tool["name"], description=tool["description"], inputSchema=tool["inputSchema"])
+		for tool in tools
+	]
 
 # ── Tool 定义 ──────────────────────────────────────────────────────
 
@@ -144,7 +154,8 @@ def _compliance_command_for_tool(tool_name: str) -> str:
 
 
 def _is_low_risk_blocked_tool(tool_name: str) -> bool:
-	return _compliance_command_for_tool(tool_name) in restricted_commands("assisted")
+	command = _compliance_command_for_tool(tool_name)
+	return command in restricted_commands("assisted")
 
 TOOLS = [
 	Tool(
@@ -175,6 +186,7 @@ TOOLS = [
 			"required": ["query"],
 		},
 	),
+	*_crawl_task_tools(),
 	Tool(
 		name="boss_recommend",
 		description="获取基于简历的个性化职位推荐",
@@ -988,6 +1000,29 @@ def _build_args(tool_name: str, arguments: dict) -> list[str]:
 			args.extend(["--page", str(arguments["page"])])
 		if arguments.get("sort"):
 			args.extend(["--sort", str(arguments["sort"])])
+		return args
+
+	if name == "crawl_status":
+		return ["crawl", "status", str(arguments["run_id"])]
+
+	if name == "crawl_results":
+		args = ["crawl", "results", str(arguments["run_id"])]
+		if arguments.get("page") is not None:
+			args.extend(["--page", str(arguments["page"])])
+		if arguments.get("detail_status"):
+			args.extend(["--detail-status", str(arguments["detail_status"])])
+		return args
+
+	if name == "crawl_shortlist":
+		args = ["crawl", "shortlist", str(arguments["run_id"])]
+		for selector in arguments.get("selectors") or []:
+			args.extend(["--selector", str(selector)])
+		if arguments.get("all"):
+			args.append("--all")
+		if arguments.get("tags"):
+			args.extend(["--tags", str(arguments["tags"])])
+		if arguments.get("note"):
+			args.extend(["--note", str(arguments["note"])])
 		return args
 
 	if name == "recommend":

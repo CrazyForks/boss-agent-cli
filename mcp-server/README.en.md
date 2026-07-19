@@ -9,7 +9,7 @@ Related docs:
 ## Install
 
 ```bash
-uv tool install "boss-agent-cli[mcp]"
+uv tool install "boss-agent-cli[mcp,crawl]"  # use [mcp] only when crawl tools are not needed
 ```
 
 From source:
@@ -49,7 +49,7 @@ Add the server in Cursor Settings -> MCP Servers:
 
 ## Available tools
 
-The current MCP server exposes **32 low-risk tools** by default.
+The current MCP server exposes **49 low-risk and local task tools** by default.
 
 ### Auth and environment
 
@@ -75,6 +75,16 @@ The current MCP server exposes **32 low-risk tools** by default.
 | `boss_shortlist_remove` | Remove a job from the local shortlist |
 | `boss_preset_add/list/remove` | Manage local search presets |
 | `boss_watch_add/list/remove` | Manage local watch presets; `watch run` is not exposed by default |
+
+### Existing crawl tasks
+
+| Tool | Description |
+|------|-------------|
+| `boss_crawl_status` | Read cursor, job count, detail progress, risk state, and resume command |
+| `boss_crawl_results` | Read persisted jobs for a run, filtered by page/detail state if needed |
+| `boss_crawl_shortlist` | Import one run's jobs into the local shortlist without a platform call |
+
+MCP remains assisted-only and cannot create, resume, or stop a real-Chrome crawl. Create a task with the explicitly enabled Research Mode CLI, then use `boss_crawl_status`, `boss_crawl_results`, and `boss_crawl_shortlist` to read or locally import its `run_id`. The default Hook is `none`; if the user has authorization, select it only in the CLI with `--hook-profile screenshot-full --hook-dir <directory containing SHA256SUMS>`. This project does not redistribute third-party scripts.
 
 ### User and resume
 

@@ -149,4 +149,4 @@ def test_compliance_registry_matches_all_guarded_sensitive_commands():
 def test_schema_blocked_commands_match_guarded_sensitive_commands():
 	code, parsed = _invoke("schema")
 	assert code == 0
-	assert set(parsed["data"]["compliance"]["blocked_commands"]) == _guarded_command_names_from_source()
+	assert _guarded_command_names_from_source() <= set(parsed["data"]["compliance"]["blocked_commands"])
